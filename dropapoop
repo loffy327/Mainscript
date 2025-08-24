@@ -1,0 +1,152 @@
+
+-- 🔑 Key System
+local PremiumKey = "toibigay" -- key bí mật
+if not getgenv().Key or getgenv().Key ~= PremiumKey then
+    game.Players.LocalPlayer:Kick("❌ Invalid Premium Key! Please enter correct key.")
+    return
+end
+
+-- Services
+local RS = game:GetService("ReplicatedStorage")
+local PoopChargeStart = RS:WaitForChild("PoopChargeStart")
+local PoopEvent = RS:WaitForChild("PoopEvent")
+local TweenService = game:GetService("TweenService")
+
+-- Config
+local spamDelay = 0.07
+local actionDuration = 3
+local autoPoopEnabled = false
+
+-- Auto poop loop
+local function autoPoop()
+    while autoPoopEnabled do
+        PoopChargeStart:FireServer()
+
+        local startTime = tick()
+        while tick() - startTime < actionDuration and autoPoopEnabled do
+            PoopEvent:FireServer(0, false)
+            task.wait(spamDelay)
+        end
+
+        if autoPoopEnabled then
+            PoopEvent:FireServer(1)
+        end
+
+        task.wait(0.5)
+    end
+end
+
+-- GUI
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoPoopGUI"
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Nút "D"
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 40, 0, 40)
+toggleButton.Position = UDim2.new(0, 10, 0.5, -20)
+toggleButton.Text = "D"
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 22
+toggleButton.AutoButtonColor = false
+toggleButton.BorderSizePixel = 2
+toggleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Parent = gui
+
+local dCorner = Instance.new("UICorner")
+dCorner.CornerRadius = UDim.new(0, 10)
+dCorner.Parent = toggleButton
+
+-- Hover effect
+toggleButton.MouseEnter:Connect(function()
+    toggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+end)
+toggleButton.MouseLeave:Connect(function()
+    toggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+end)
+
+-- Menu chính (ẩn ban đầu, trượt + fade in/out)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 300)
+mainFrame.Position = UDim2.new(0, -320, 0.5, -150) -- bắt đầu trượt ngoài màn
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+mainFrame.Visible = true
+mainFrame.BackgroundTransparency = 1
+mainFrame.Parent = gui
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 12)
+frameCorner.Parent = mainFrame
+
+-- Tiêu đề menu
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "Main Menu"
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 8)
+titleCorner.Parent = title
+
+-- Nút Auto Poop
+local poopButton = Instance.new("TextButton")
+poopButton.Size = UDim2.new(0, 260, 0, 60)
+poopButton.Position = UDim2.new(0, 20, 0, 70)
+poopButton.Text = "Auto Poop: OFF"
+poopButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+poopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+poopButton.Font = Enum.Font.GothamBold
+poopButton.TextSize = 18
+poopButton.Parent = mainFrame
+
+local poopCorner = Instance.new("UICorner")
+poopCorner.CornerRadius = UDim.new(0, 10)
+poopCorner.Parent = poopButton
+
+-- Animation function
+local menuOpen = false
+local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+local function openMenu()
+    local tweenPos = TweenService:Create(mainFrame, tweenInfo, {Position = UDim2.new(0, 60, 0.5, -150)})
+    local tweenFade = TweenService:Create(mainFrame, tweenInfo, {BackgroundTransparency = 0})
+    tweenPos:Play()
+    tweenFade:Play()
+end
+
+local function closeMenu()
+    local tweenPos = TweenService:Create(mainFrame, tweenInfo, {Position = UDim2.new(0, -320, 0.5, -150)})
+    local tweenFade = TweenService:Create(mainFrame, tweenInfo, {BackgroundTransparency = 1})
+    tweenPos:Play()
+    tweenFade:Play()
+end
+
+-- Toggle menu khi bấm D
+toggleButton.MouseButton1Click:Connect(function()
+    menuOpen = not menuOpen
+    if menuOpen then
+        openMenu()
+    else
+        closeMenu()
+    end
+end)
+
+-- Toggle Auto Poop
+poopButton.MouseButton1Click:Connect(function()
+    autoPoopEnabled = not autoPoopEnabled
+    poopButton.Text = autoPoopEnabled and "Auto Poop: ON" or "Auto Poop: OFF"
+    poopButton.BackgroundColor3 = autoPoopEnabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(60, 60, 60)
+
+    if autoPoopEnabled then
+        task.spawn(autoPoop)
+    end
+end)
