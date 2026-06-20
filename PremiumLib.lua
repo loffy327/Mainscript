@@ -608,20 +608,14 @@ function PremiumLib:CreateWindow(config)
 		AddStroke(NotifFrame, accentColor, 1, 0.5)
 
 		-- Accent side bar
-		CreateInstance("Frame", {
+		local accentBar = CreateInstance("Frame", {
 			BackgroundColor3 = accentColor,
 			Size = UDim2.new(0, 3, 0.7, 0),
 			Position = UDim2.new(0, 6, 0.15, 0),
 			BorderSizePixel = 0,
 			Parent = NotifFrame
-		}):FindFirstChildOfClass("UICorner") or AddCorner(
-			NotifFrame:FindFirstChild("Frame") or CreateInstance("Frame", {Parent = NotifFrame}),
-			UDim.new(1, 0)
-		)
-
-		-- Fix: add corner to accent bar
-		local accentBar = NotifFrame:FindFirstChild("Frame")
-		if accentBar then AddCorner(accentBar, UDim.new(1, 0)) end
+		})
+		AddCorner(accentBar, UDim.new(1, 0))
 
 		CreateInstance("TextLabel", {
 			BackgroundTransparency = 1,
@@ -1415,16 +1409,14 @@ function PremiumLib:CreateWindow(config)
 			AddCorner(LabelFrame, Theme.CornerRadiusSmall)
 
 			-- Accent dot
-			CreateInstance("Frame", {
+			local accentDot = CreateInstance("Frame", {
 				BackgroundColor3 = Theme.Accent,
 				Size = UDim2.new(0, 6, 0, 6),
 				Position = UDim2.new(0, 12, 0.5, 0),
 				AnchorPoint = Vector2.new(0, 0.5),
 				Parent = LabelFrame
-			}):FindFirstChildOfClass("UICorner") or AddCorner(LabelFrame:FindFirstChild("Frame"), UDim.new(1, 0))
-
-			local accentDot = LabelFrame:FindFirstChild("Frame")
-			if accentDot then AddCorner(accentDot, UDim.new(1, 0)) end
+			})
+			AddCorner(accentDot, UDim.new(1, 0))
 
 			local LabelText = CreateInstance("TextLabel", {
 				Name = "Text",
