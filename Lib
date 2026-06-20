@@ -147,6 +147,11 @@ function Library:CreateWindow(config)
 		if Theme[k] == nil then Theme[k] = v end
 	end
 
+	-- TutorialMode = true (default) hiển thị tab "Tutorial" hướng dẫn sử dụng.
+	-- Đặt TutorialMode = false trong config để tắt menu hướng dẫn này.
+	local TutorialMode = config.TutorialMode
+	if TutorialMode == nil then TutorialMode = true end
+
 	-- xoá UI cũ nếu có (tránh trùng khi load lại script)
 	local existing = PlayerGui:FindFirstChild("PremiumUILib")
 	if existing then existing:Destroy() end
@@ -783,6 +788,53 @@ function Library:CreateWindow(config)
 		end
 
 		return setmetatable({}, Tab)
+	end
+
+	----------------------------------------------------------------
+	-- TUTORIAL / GETTING STARTED TAB (toggle via config.TutorialMode)
+	----------------------------------------------------------------
+	if TutorialMode then
+		local TutorialTab = Window:CreateTab("Tutorial")
+
+		local WelcomeSection = TutorialTab:CreateSection("Welcome")
+		WelcomeSection:CreateLabel(
+			"Thanks for using this UI library! This tab walks you through building your menu: tabs, sections, components, and connecting RemoteEvents. Set TutorialMode = false in the config to hide this tab next time."
+		)
+
+		local TabSection = TutorialTab:CreateSection("1. Create Tabs & Sections")
+		TabSection:CreateLabel('local Tab = Window:CreateTab("Main")')
+		TabSection:CreateLabel('local Section = Tab:CreateSection("General")')
+		TabSection:CreateLabel("Each Tab shows up in the sidebar. Each Section is a card inside a tab that groups related controls together.")
+
+		local CompSection = TutorialTab:CreateSection("2. Add Components")
+		CompSection:CreateLabel('Section:CreateButton("Click Me", function() print("clicked") end)')
+		CompSection:CreateLabel('Section:CreateToggle("Enable", false, function(state) print(state) end)')
+		CompSection:CreateLabel('Section:CreateSlider("Speed", 0, 100, 50, function(v) print(v) end)')
+		CompSection:CreateLabel('Section:CreateDropdown("Mode", {"Easy","Hard"}, function(v) print(v) end)')
+
+		local RemoteSection = TutorialTab:CreateSection("3. Connect a RemoteEvent")
+		RemoteSection:CreateLabel("Use a RemoteEvent to send actions from this menu to the server. Example:")
+		RemoteSection:CreateLabel('local Remote = game:GetService("ReplicatedStorage"):WaitForChild("MyRemote")')
+		RemoteSection:CreateLabel('Section:CreateButton("Fire Remote", function() Remote:FireServer("Hello") end)')
+		RemoteSection:CreateLabel("Listen for server replies with: Remote.OnClientEvent:Connect(function(...) ... end)")
+
+		local CloseSection = TutorialTab:CreateSection("Done?")
+		CloseSection:CreateButton("Got it, hide tutorial", function()
+			local idx
+			for i, page in ipairs(Window._tabPages) do
+				if page.Name == "TutorialPage" then idx = i end
+			end
+			if idx then
+				Window._tabButtons[idx]:Destroy()
+				Window._tabPages[idx]:Destroy()
+				table.remove(Window._tabButtons, idx)
+				table.remove(Window._tabPages, idx)
+				if #Window._tabPages > 0 then
+					Window._tabPages[1].Visible = true
+					Tween(Window._tabButtons[1], { BackgroundTransparency = 0 }, 0.15)
+				end
+			end
+		end)
 	end
 
 	return setmetatable(Window, self)
