@@ -1213,6 +1213,241 @@ function Libv2:CreateWindow(cfg)
             return API
         end
 
+        -- ---- RANGE SLIDER ----
+        function Tab:CreateRangeSlider(opts)
+            opts = opts or {}
+            local min  = opts.Min      or 0
+            local max  = opts.Max      or 100
+            local step = opts.Increment or 1
+            local curMin = opts.DefaultMin or min
+            local curMax = opts.DefaultMax or max
+
+            local row = Util.New("Frame", {
+                BackgroundColor3 = T.Surface,
+                Size     = UDim2.new(1, 0, 0, 56),
+                LayoutOrder = #Page:GetChildren(),
+                ZIndex   = 3,
+                Parent   = Page,
+            })
+            Util.Corner(row, T.RadiusSm)
+            Util.HoverBind(row, T.Surface, T.SurfaceHov)
+
+            Util.New("TextLabel", {
+                BackgroundTransparency = 1,
+                Size     = UDim2.new(0.4, -14, 0, 20),
+                Position = UDim2.new(0, 16, 0, 6),
+                Font     = T.FontMed,
+                Text     = opts.Name or "Range",
+                TextColor3 = T.TxtHigh,
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex   = 4,
+                Parent   = row,
+            })
+
+            local ValDisplay = Util.New("TextLabel", {
+                BackgroundTransparency = 1,
+                Size     = UDim2.new(0.5, 0, 0, 20),
+                Position = UDim2.new(0.5, -16, 0, 6),
+                Font     = T.FontMono,
+                Text     = tostring(curMin) .. " - " .. tostring(curMax),
+                TextColor3 = T.Accent,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Right,
+                ZIndex   = 4,
+                Parent   = row,
+            })
+
+            local track = Util.New("Frame", {
+                BackgroundColor3 = T.SurfaceAct,
+                Size     = UDim2.new(1, -32, 0, 6),
+                Position = UDim2.new(0, 16, 0, 40),
+                ZIndex   = 4,
+                Parent   = row,
+            })
+            Util.Corner(track, UDim.new(1, 0))
+
+            local fill = Util.New("Frame", {
+                BackgroundColor3 = T.Accent,
+                Size     = UDim2.new(0, 0, 1, 0),
+                Position = UDim2.new(0, 0, 0, 0),
+                ZIndex   = 5,
+                Parent   = track,
+            })
+            Util.Corner(fill, UDim.new(1, 0))
+
+            local knobMin = Util.New("Frame", {
+                BackgroundColor3 = Color3.new(1, 1, 1),
+                Size     = UDim2.new(0, 16, 0, 16),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                ZIndex   = 6,
+                Parent   = track,
+            })
+            Util.Corner(knobMin, UDim.new(1, 0))
+            Util.Stroke(knobMin, T.Accent, 2)
+            Util.Shadow(knobMin)
+
+            local knobMax = Util.New("Frame", {
+                BackgroundColor3 = Color3.new(1, 1, 1),
+                Size     = UDim2.new(0, 16, 0, 16),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                ZIndex   = 6,
+                Parent   = track,
+            })
+            Util.Corner(knobMax, UDim.new(1, 0))
+            Util.Stroke(knobMax, T.Accent, 2)
+            Util.Shadow(knobMax)
+
+            local dragMin, dragMax = false, false
+
+            local function UpdateVisuals()
+                local pctMin = (curMin - min) / (max - min)
+                local pctMax = (curMax - min) / (max - min)
+                
+                knobMin.Position = UDim2.new(pctMin, 0, 0.5, 0)
+                knobMax.Position = UDim2.new(pctMax, 0, 0.5, 0)
+                
+                fill.Position = UDim2.new(pctMin, 0, 0, 0)
+                fill.Size = UDim2.new(pctMax - pctMin, 0, 1, 0)
+                
+                ValDisplay.Text = tostring(curMin) .. " - " .. tostring(curMax)
+                
+                if opts.Callback then opts.Callback(curMin, curMax) end
+            end
+            UpdateVisuals()
+
+            local function ApplyX(px, isMin)
+                local abs = track.AbsolutePosition.X
+                local sz = track.AbsoluteSize.X
+                local rel = math.clamp((px - abs) / sz, 0, 1)
+                local raw = min + (max - min) * rel
+                local val = math.clamp(math.floor(raw / step + 0.5) * step, min, max)
+
+                if isMin then
+                    curMin = math.min(val, curMax)
+                else
+                    curMax = math.max(val, curMin)
+                end
+                UpdateVisuals()
+            end
+
+            knobMin.InputBegan:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                    dragMin = true
+                end
+            end)
+            knobMax.InputBegan:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                    dragMax = true
+                end
+            end)
+
+            UserInputService.InputChanged:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
+                    if dragMin then ApplyX(inp.Position.X, true) end
+                    if dragMax then ApplyX(inp.Position.X, false) end
+                end
+            end)
+
+            UserInputService.InputEnded:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                    dragMin = false
+                    dragMax = false
+                end
+            end)
+
+            local API = {}
+            function API:Set(mn, mx)
+                curMin = math.clamp(mn, min, max)
+                curMax = math.clamp(mx, min, max)
+                if curMin > curMax then curMin, curMax = curMax, curMin end
+                UpdateVisuals()
+            end
+            function API:Get() return curMin, curMax end
+            return API
+        end
+
+        -- ---- PLAYER CARD ----
+        function Tab:CreatePlayerCard(opts)
+            opts = opts or {}
+            
+            local row = Util.New("Frame", {
+                BackgroundColor3 = T.Surface,
+                Size     = UDim2.new(1, 0, 0, 70),
+                LayoutOrder = #Page:GetChildren(),
+                ZIndex   = 3,
+                Parent   = Page,
+            })
+            Util.Corner(row, T.RadiusSm)
+            Util.Stroke(row, T.Border, 1, 0.4)
+            Util.HoverBind(row, T.Surface, T.SurfaceHov)
+
+            local UserId = opts.UserId or 1
+            local Username = opts.Username or "Roblox"
+            local DisplayName = opts.DisplayName or "Roblox"
+
+            local avatar = Util.New("ImageLabel", {
+                BackgroundColor3 = T.SurfaceAct,
+                Size = UDim2.new(0, 50, 0, 50),
+                Position = UDim2.new(0, 10, 0, 10),
+                Image = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(UserId) .. "&w=150&h=150",
+                ZIndex = 4,
+                Parent = row
+            })
+            Util.Corner(avatar, UDim.new(1, 0))
+            Util.Stroke(avatar, T.Border, 1)
+
+            Util.New("TextLabel", {
+                BackgroundTransparency = 1,
+                Size     = UDim2.new(0.5, 0, 0, 20),
+                Position = UDim2.new(0, 72, 0, 14),
+                Font     = T.FontBold,
+                Text     = DisplayName,
+                TextColor3 = T.TxtHigh,
+                TextSize = 16,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex   = 4,
+                Parent   = row,
+            })
+
+            Util.New("TextLabel", {
+                BackgroundTransparency = 1,
+                Size     = UDim2.new(0.5, 0, 0, 16),
+                Position = UDim2.new(0, 72, 0, 36),
+                Font     = T.FontMed,
+                Text     = "@" .. Username,
+                TextColor3 = T.TxtLow,
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex   = 4,
+                Parent   = row,
+            })
+
+            if opts.Callback then
+                local btn = Util.New("TextButton", {
+                    BackgroundColor3 = T.Accent,
+                    Size = UDim2.new(0, 80, 0, 30),
+                    Position = UDim2.new(1, -90, 0.5, 0),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Font = T.FontBold,
+                    Text = opts.ButtonText or "Action",
+                    TextColor3 = Color3.new(1,1,1),
+                    TextSize = 13,
+                    AutoButtonColor = false,
+                    ZIndex = 5,
+                    Parent = row
+                })
+                Util.Corner(btn, T.RadiusSm)
+                
+                btn.MouseEnter:Connect(function() Util.Tween(btn, {BackgroundColor3 = T.AccentHov}, 0.15) end)
+                btn.MouseLeave:Connect(function() Util.Tween(btn, {BackgroundColor3 = T.Accent}, 0.15) end)
+                btn.MouseButton1Click:Connect(function()
+                    Util.Ripple(btn)
+                    opts.Callback(UserId)
+                end)
+            end
+        end
+
         -- ---- BUTTON ----
         function Tab:CreateButton(opts)
             opts = opts or {}
@@ -1811,6 +2046,35 @@ function Libv2:CreateWindow(cfg)
         end
 
         return Tab
+    end
+
+    -- ============================================================
+    --  WINDOW API
+    -- ============================================================
+
+    local Window = {}
+    Window.Notify = Notify
+
+    function Window:FetchAPI(url, decodeJSON)
+        local success, res = pcall(function()
+            return game:HttpGet(url)
+        end)
+        if not success then
+            Notify({Title = "API Error", Content = "Failed to fetch: " .. tostring(res), Type = "Error", Duration = 5})
+            return nil
+        end
+        
+        if decodeJSON then
+            local s2, parsed = pcall(function()
+                return HttpService:JSONDecode(res)
+            end)
+            if not s2 then
+                Notify({Title = "JSON Error", Content = "Failed to parse API response.", Type = "Error", Duration = 5})
+                return nil
+            end
+            return parsed
+        end
+        return res
     end
 
     -- ============================================================
