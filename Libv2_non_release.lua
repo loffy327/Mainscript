@@ -339,7 +339,8 @@ function Libv2:CreateWindow(cfg)
     -- ============================================================
     local AvatarToggle = Util.New("ImageButton", {
         Name = "AvatarToggle",
-        BackgroundColor3 = T.Surface,
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 1,
         Size = UDim2.new(0, 80, 0, 80),
         Position = UDim2.new(0.5, 0, 0.1, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
