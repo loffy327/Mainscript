@@ -299,11 +299,20 @@ function Libv2:CreateWindow(cfg)
         ActiveTab   = nil,
         Tabs        = {},
         Data        = {},
+        Elements    = {}, -- Track for Search
     }
 
     -- ============================================================
-    --  SCREEN GUI
+    --  SCREEN GUI & ANTI-DUPLICATION
     -- ============================================================
+    
+    local CoreGui = game:GetService("CoreGui")
+    local success = pcall(function() return CoreGui.Name end)
+    local GuiParent = success and CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+
+    if GuiParent:FindFirstChild("Libv2_Premium") then
+        GuiParent:FindFirstChild("Libv2_Premium"):Destroy()
+    end
 
     local Gui = Util.New("ScreenGui", {
         Name            = "Libv2_Premium",
@@ -311,7 +320,7 @@ function Libv2:CreateWindow(cfg)
         ZIndexBehavior  = Enum.ZIndexBehavior.Sibling,
         DisplayOrder    = 999,
         IgnoreGuiInset  = true,
-        Parent          = LocalPlayer:WaitForChild("PlayerGui"),
+        Parent          = GuiParent,
     })
 
     -- ============================================================
@@ -496,6 +505,37 @@ function Libv2:CreateWindow(cfg)
         Parent      = TitleBar,
     })
 
+    -- Search Bar
+    local SearchWrap = Util.New("Frame", {
+        BackgroundColor3 = T.SurfaceAct,
+        Size = UDim2.new(0, 180, 0, 28),
+        Position = UDim2.new(1, -320, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
+        ZIndex = 5,
+        Parent = TitleBar
+    })
+    Util.Corner(SearchWrap, T.RadiusSm)
+    Util.Stroke(SearchWrap, T.Border, 1)
+
+    local SearchIcon = Util.New("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 26, 1, 0),
+        Position = UDim2.new(0, 2, 0, 0),
+        Font = T.FontMed, Text = "🔍", TextColor3 = T.TxtLow, TextSize = 13,
+        ZIndex = 6, Parent = SearchWrap
+    })
+
+    local SearchBox = Util.New("TextBox", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -32, 1, 0),
+        Position = UDim2.new(0, 26, 0, 0),
+        Font = T.FontMed, Text = "", PlaceholderText = "Search features...",
+        TextColor3 = T.TxtHigh, PlaceholderColor3 = T.TxtLow, TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        ZIndex = 6, Parent = SearchWrap
+    })
+
     Util.MakeDraggable(Win, TitleBar)
 
     -- ============================================================
@@ -649,6 +689,68 @@ function Libv2:CreateWindow(cfg)
         Parent   = Body,
     })
 
+    -- Search Page
+    local SearchPage = Util.New("ScrollingFrame", {
+        BackgroundTransparency = 1,
+        Size        = UDim2.new(1, -16, 1, -16),
+        Position    = UDim2.new(0, 8, 0, 8),
+        CanvasSize  = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollBarThickness  = 3,
+        ScrollBarImageColor3 = T.Scrollbar,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex  = 3,
+        Parent  = Content,
+    })
+    Util.ListLayout(SearchPage, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, UDim.new(0, 8))
+    Util.Padding(SearchPage, 6, 6, 6, 6)
+
+    SearchBox.Changed:Connect(function(prop)
+        if prop == "Text" then
+            local q = string.lower(SearchBox.Text)
+            if q == "" then
+                SearchPage.Visible = false
+                if State.ActiveTab then State.ActiveTab.Page.Visible = true end
+                -- Restore all elements
+                for _, el in ipairs(State.Elements) do
+                    if el.Row and el.OriginalPage then
+                        el.Row.Parent = el.OriginalPage
+                    end
+                end
+                State.Elements = {}
+            else
+                if State.ActiveTab then State.ActiveTab.Page.Visible = false end
+                SearchPage.Visible = true
+                
+                -- Index elements on first search
+                if #State.Elements == 0 then
+                    for _, tab in ipairs(State.Tabs) do
+                        for _, row in ipairs(tab.Page:GetChildren()) do
+                            if row:IsA("Frame") or row:IsA("TextButton") then
+                                local name = ""
+                                for _, c in ipairs(row:GetChildren()) do
+                                    if c:IsA("TextLabel") and c.Text ~= "" then
+                                        name = name .. " " .. c.Text
+                                    end
+                                end
+                                table.insert(State.Elements, { Name = name, Row = row, OriginalPage = tab.Page })
+                            end
+                        end
+                    end
+                end
+
+                for _, el in ipairs(State.Elements) do
+                    if string.find(string.lower(el.Name), q) then
+                        el.Row.Parent = SearchPage
+                    else
+                        el.Row.Parent = nil
+                    end
+                end
+            end
+        end
+    end)
+
     -- ============================================================
     --  NOTIFICATION SYSTEM
     -- ============================================================
@@ -739,6 +841,63 @@ function Libv2:CreateWindow(cfg)
             end)
         end)
     end
+
+    -- ============================================================
+    --  WATERMARK & OVERLAY
+    -- ============================================================
+
+    local Watermark = Util.New("Frame", {
+        Name = "Watermark",
+        BackgroundColor3 = T.BGAlt,
+        BackgroundTransparency = 0.2,
+        Size = UDim2.new(0, 300, 0, 32),
+        Position = UDim2.new(0, 20, 0, 20),
+        ZIndex = 100,
+        Parent = Gui
+    })
+    Util.Corner(Watermark, T.RadiusSm)
+    Util.Stroke(Watermark, T.Accent, 1, 0.4)
+    Util.Shadow(Watermark)
+    Util.MakeDraggable(Watermark, Watermark)
+
+    local WMText = Util.New("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        Font = T.FontMed,
+        Text = WCfg.Title .. " | FPS: 60 | Ping: 0ms | 00:00:00",
+        TextColor3 = T.TxtHigh,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 101,
+        Parent = Watermark
+    })
+
+    local RunService = game:GetService("RunService")
+    local lastTick = tick()
+    local frames = 0
+    local currentFPS = 60
+    
+    local rsConn = RunService.RenderStepped:Connect(function()
+        frames = frames + 1
+        if tick() - lastTick >= 1 then
+            currentFPS = frames
+            frames = 0
+            lastTick = tick()
+            
+            local ping = 0
+            pcall(function()
+                ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+            end)
+            
+            local timeStr = os.date("%X")
+            WMText.Text = WCfg.Title .. " | FPS: " .. tostring(currentFPS) .. " | Ping: " .. tostring(ping) .. "ms | " .. timeStr
+            
+            -- Auto scale width
+            local bounds = Util.GetTextBounds(WMText.Text, T.FontMed, 13, Vector2.new(1000, 32))
+            Util.Tween(Watermark, {Size = UDim2.new(0, bounds.X + 26, 0, 32)}, 0.2)
+        end
+    end)
 
     -- ============================================================
     --  WINDOW API
@@ -865,6 +1024,79 @@ function Libv2:CreateWindow(cfg)
         -- ============================================================
 
         local Tab = {}
+
+        -- ---- SUB-TAB SYSTEM (V2 NR) ----
+        local SubTabBar = nil
+        local SubTabs = {}
+
+        function Tab:CreateSubTab(opts)
+            opts = opts or {}
+            local subName = opts.Name or "SubTab"
+
+            if not SubTabBar then
+                SubTabBar = Util.New("ScrollingFrame", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 36),
+                    CanvasSize = UDim2.new(0, 0, 0, 0),
+                    AutomaticCanvasSize = Enum.AutomaticSize.X,
+                    ScrollBarThickness = 0,
+                    LayoutOrder = -999,
+                    Parent = Page
+                })
+                Util.ListLayout(SubTabBar, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center, UDim.new(0, 6))
+            end
+
+            local SubBtn = Util.New("TextButton", {
+                BackgroundColor3 = T.Surface,
+                Size = UDim2.new(0, 100, 1, -4),
+                Font = T.FontMed,
+                Text = subName,
+                TextColor3 = T.TxtMid,
+                TextSize = 13,
+                AutoButtonColor = false,
+                Parent = SubTabBar
+            })
+            Util.Corner(SubBtn, T.RadiusSm)
+
+            local SubPage = Util.New("Frame", {
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                Visible = false,
+                LayoutOrder = #SubTabs + 1,
+                Parent = Page
+            })
+            Util.ListLayout(SubPage, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, UDim.new(0, 8))
+
+            local subData = { Btn = SubBtn, Page = SubPage }
+            table.insert(SubTabs, subData)
+
+            local function SelectSubTab()
+                for _, s in ipairs(SubTabs) do
+                    s.Page.Visible = false
+                    Util.Tween(s.Btn, {BackgroundColor3 = T.Surface, TextColor3 = T.TxtMid}, 0.2)
+                end
+                SubPage.Visible = true
+                Util.Tween(SubBtn, {BackgroundColor3 = T.Accent, TextColor3 = Color3.new(1,1,1)}, 0.2)
+            end
+            SubBtn.MouseButton1Click:Connect(SelectSubTab)
+            if #SubTabs == 1 then SelectSubTab() end
+
+            local SubTabAPI = setmetatable({}, {
+                __index = function(_, key)
+                    if Tab[key] then
+                        return function(_, ...)
+                            local oldPage = Page
+                            Page = SubPage
+                            local res = Tab[key](Tab, ...)
+                            Page = oldPage
+                            return res
+                        end
+                    end
+                end
+            })
+            return SubTabAPI
+        end
 
         -- ---- SECTION ----
         function Tab:CreateSection(name)
@@ -2000,16 +2232,27 @@ function Libv2:CreateWindow(cfg)
         function Tab:CreateColorPicker(opts)
             opts = opts or {}
             local color = opts.Default or Color3.new(1, 1, 1)
+            local h, s, v = Color3.toHSV(color)
 
-            local row = Util.New("Frame", {
+            local wrap = Util.New("Frame", {
                 BackgroundColor3 = T.Surface,
                 Size     = UDim2.new(1, 0, 0, 44),
+                ClipsDescendants = true,
                 LayoutOrder = #Page:GetChildren(),
                 ZIndex   = 3,
                 Parent   = Page,
             })
-            Util.Corner(row, T.RadiusSm)
-            Util.HoverBind(row, T.Surface, T.SurfaceHov)
+            Util.Corner(wrap, T.RadiusSm)
+
+            local row = Util.New("TextButton", {
+                BackgroundTransparency = 1,
+                Size     = UDim2.new(1, 0, 0, 44),
+                Text     = "",
+                AutoButtonColor = false,
+                ZIndex   = 4,
+                Parent   = wrap,
+            })
+            Util.HoverBind(wrap, T.Surface, T.SurfaceHov)
 
             Util.New("TextLabel", {
                 BackgroundTransparency = 1,
@@ -2020,7 +2263,7 @@ function Libv2:CreateWindow(cfg)
                 TextColor3 = T.TxtHigh,
                 TextSize = 14,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex   = 4,
+                ZIndex   = 5,
                 Parent   = row,
             })
 
@@ -2029,17 +2272,155 @@ function Libv2:CreateWindow(cfg)
                 Size     = UDim2.new(0, 32, 0, 32),
                 Position = UDim2.new(1, -48, 0.5, 0),
                 AnchorPoint = Vector2.new(0, 0.5),
-                ZIndex   = 5,
+                ZIndex   = 6,
                 Parent   = row,
             })
             Util.Corner(swatch, UDim.new(0, 6))
             Util.Stroke(swatch, T.Border, 1)
 
+            local PickerArea = Util.New("Frame", {
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 130),
+                Position = UDim2.new(0, 0, 0, 44),
+                ZIndex = 4,
+                Parent = wrap
+            })
+
+            local HueMap = Util.New("ImageLabel", {
+                Size = UDim2.new(0, 150, 0, 110),
+                Position = UDim2.new(0, 16, 0, 10),
+                Image = "rbxassetid://4155801252",
+                ZIndex = 5,
+                Parent = PickerArea
+            })
+            Util.Corner(HueMap, T.RadiusXs)
+            local HueRing = Util.New("Frame", {
+                BackgroundColor3 = Color3.new(1,1,1),
+                Size = UDim2.new(0, 6, 0, 6),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.new(1 - h, 0, 1 - s, 0),
+                ZIndex = 6,
+                Parent = HueMap
+            })
+            Util.Corner(HueRing, UDim.new(1,0))
+            Util.Stroke(HueRing, Color3.new(0,0,0), 1)
+
+            local ValSlider = Util.New("Frame", {
+                Size = UDim2.new(0, 16, 0, 110),
+                Position = UDim2.new(0, 176, 0, 10),
+                ZIndex = 5,
+                Parent = PickerArea
+            })
+            Util.Corner(ValSlider, T.RadiusXs)
+            local ValUIG = Util.New("UIGradient", {
+                Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(1,1,1)), ColorSequenceKeypoint.new(1, Color3.new(0,0,0))}),
+                Rotation = 90,
+                Parent = ValSlider
+            })
+            local ValRing = Util.New("Frame", {
+                BackgroundColor3 = Color3.new(1,1,1),
+                Size = UDim2.new(1, 4, 0, 4),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.new(0.5, 0, 1 - v, 0),
+                ZIndex = 6,
+                Parent = ValSlider
+            })
+            Util.Stroke(ValRing, Color3.new(0,0,0), 1)
+
+            local HexWrap = Util.New("Frame", {
+                BackgroundColor3 = T.SurfaceAct,
+                Size = UDim2.new(0, 70, 0, 26),
+                Position = UDim2.new(0, 202, 0, 10),
+                ZIndex = 5,
+                Parent = PickerArea
+            })
+            Util.Corner(HexWrap, T.RadiusXs)
+            Util.Stroke(HexWrap, T.Border, 1)
+
+            local HexPrefix = Util.New("TextLabel", {
+                BackgroundTransparency = 1, Size = UDim2.new(0, 20, 1, 0),
+                Font = T.FontMono, Text = "#", TextColor3 = T.TxtLow, TextSize = 13,
+                ZIndex = 6, Parent = HexWrap
+            })
+            local HexInput = Util.New("TextBox", {
+                BackgroundTransparency = 1, Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 20, 0, 0),
+                Font = T.FontMono, Text = color:ToHex(), TextColor3 = T.TxtHigh, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+                ClearTextOnFocus = false, ZIndex = 6, Parent = HexWrap
+            })
+
+            local function UpdateColor()
+                color = Color3.fromHSV(h, s, v)
+                swatch.BackgroundColor3 = color
+                HexInput.Text = color:ToHex()
+                ValUIG.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHSV(h, s, 1)), ColorSequenceKeypoint.new(1, Color3.new(0,0,0))})
+                if opts.Callback then opts.Callback(color) end
+            end
+
+            local draggingMap = false
+            local draggingVal = false
+
+            UserInputService.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    local p = input.Position
+                    if p.X >= HueMap.AbsolutePosition.X and p.X <= HueMap.AbsolutePosition.X + HueMap.AbsoluteSize.X and p.Y >= HueMap.AbsolutePosition.Y and p.Y <= HueMap.AbsolutePosition.Y + HueMap.AbsoluteSize.Y then
+                        draggingMap = true
+                    elseif p.X >= ValSlider.AbsolutePosition.X and p.X <= ValSlider.AbsolutePosition.X + ValSlider.AbsoluteSize.X and p.Y >= ValSlider.AbsolutePosition.Y and p.Y <= ValSlider.AbsolutePosition.Y + ValSlider.AbsoluteSize.Y then
+                        draggingVal = true
+                    end
+                end
+            end)
+
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingMap = false
+                    draggingVal = false
+                end
+            end)
+
+            UserInputService.InputChanged:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                    if draggingMap then
+                        local relX = math.clamp(input.Position.X - HueMap.AbsolutePosition.X, 0, HueMap.AbsoluteSize.X)
+                        local relY = math.clamp(input.Position.Y - HueMap.AbsolutePosition.Y, 0, HueMap.AbsoluteSize.Y)
+                        HueRing.Position = UDim2.new(0, relX, 0, relY)
+                        h = 1 - (relX / HueMap.AbsoluteSize.X)
+                        s = 1 - (relY / HueMap.AbsoluteSize.Y)
+                        UpdateColor()
+                    elseif draggingVal then
+                        local relY = math.clamp(input.Position.Y - ValSlider.AbsolutePosition.Y, 0, ValSlider.AbsoluteSize.Y)
+                        ValRing.Position = UDim2.new(0.5, 0, 0, relY)
+                        v = 1 - (relY / ValSlider.AbsoluteSize.Y)
+                        UpdateColor()
+                    end
+                end
+            end)
+
+            HexInput.FocusLost:Connect(function()
+                local txt = HexInput.Text
+                local success, col = pcall(function() return Color3.fromHex(txt) end)
+                if success and col then
+                    h, s, v = Color3.toHSV(col)
+                    HueRing.Position = UDim2.new(1 - h, 0, 1 - s, 0)
+                    ValRing.Position = UDim2.new(0.5, 0, 1 - v, 0)
+                    UpdateColor()
+                else
+                    HexInput.Text = color:ToHex()
+                end
+            end)
+
+            local open = false
+            row.MouseButton1Click:Connect(function()
+                open = not open
+                Util.Tween(wrap, {Size = UDim2.new(1, 0, 0, open and 184 or 44)}, 0.3, Enum.EasingStyle.Back)
+            end)
+            UpdateColor()
+
             local API = {}
             function API:Set(c)
-                color = c
-                swatch.BackgroundColor3 = c
-                if opts.Callback then opts.Callback(c) end
+                h, s, v = Color3.toHSV(c)
+                HueRing.Position = UDim2.new(1 - h, 0, 1 - s, 0)
+                ValRing.Position = UDim2.new(0.5, 0, 1 - v, 0)
+                UpdateColor()
             end
             function API:Get() return color end
             return API
@@ -2253,6 +2634,90 @@ function Libv2:CreateWindow(cfg)
             DrawPage(1)
         end)
     end
+
+    -- ============================================================
+    --  VISUAL CONFIG MANAGER (AUTO-TAB)
+    -- ============================================================
+    local SettingsTab = Window:CreateTab({ Name = "⚙ Settings", Order = 9999 })
+    
+    local configNameInput = ""
+    local ConfigInput = SettingsTab:CreateInput({
+        Name = "Config Name",
+        Placeholder = "e.g. best_legit",
+        Callback = function(val) configNameInput = val end
+    })
+
+    local function GetConfigs()
+        local list = {}
+        if listfiles then
+            pcall(function()
+                for _, f in ipairs(listfiles("")) do
+                    if f:match("%.json$") then
+                        local clean = f:gsub("%.json$", "")
+                        if clean:find("\\") then clean = clean:match(".*\\(.*)") end
+                        if clean:find("/") then clean = clean:match(".*/(.*)") end
+                        table.insert(list, clean)
+                    end
+                end
+            end)
+        end
+        return list
+    end
+
+    local ConfigDrop
+    ConfigDrop = SettingsTab:CreateDropdown({
+        Name = "Available Configs",
+        Items = GetConfigs(),
+        Callback = function(val) 
+            configNameInput = val
+            ConfigInput:Set(val)
+        end
+    })
+
+    SettingsTab:CreateButton({
+        Name = "Refresh List",
+        Callback = function()
+            ConfigDrop:Refresh(GetConfigs())
+        end
+    })
+
+    SettingsTab:CreateButton({
+        Name = "💾 Save / Overwrite",
+        Callback = function()
+            if configNameInput ~= "" then
+                Window:SaveConfig(configNameInput)
+                ConfigDrop:Refresh(GetConfigs())
+            else
+                Notify({Title="Error", Content="Enter config name!", Type="Error", Duration=3})
+            end
+        end
+    })
+
+    SettingsTab:CreateButton({
+        Name = "📂 Load Config",
+        Callback = function()
+            if configNameInput ~= "" then
+                Window:LoadConfig(configNameInput)
+            else
+                Notify({Title="Error", Content="Select a config to load!", Type="Error", Duration=3})
+            end
+        end
+    })
+
+    SettingsTab:CreateButton({
+        Name = "🗑️ Delete Config",
+        Callback = function()
+            if configNameInput ~= "" and delfile then
+                pcall(function() delfile(configNameInput .. ".json") end)
+                Notify({Title="Deleted", Content="Deleted: " .. configNameInput, Type="Warning", Duration=3})
+                ConfigDrop:Refresh(GetConfigs())
+                configNameInput = ""
+                ConfigInput:Set("")
+            else
+                Notify({Title="Error", Content="Cannot delete config.", Type="Error", Duration=3})
+            end
+        end
+    })
 
     return Window
 end
