@@ -112,11 +112,14 @@ function Util.New(class, props)
         end
     end
     -- Auto-Glassmorphism
-    if not (props and props.BackgroundTransparency) then
-        if obj.BackgroundColor3 == DefaultTheme.Surface or obj.BackgroundColor3 == DefaultTheme.SurfaceAct or obj.BackgroundColor3 == DefaultTheme.SurfaceHov then
-            obj.BackgroundTransparency = 0.4
-        elseif obj.BackgroundColor3 == DefaultTheme.BG or obj.BackgroundColor3 == DefaultTheme.BGAlt then
-            obj.BackgroundTransparency = 0.25
+    if obj:IsA("GuiObject") and not (props and props.BackgroundTransparency) then
+        local s, bgCol = pcall(function() return obj.BackgroundColor3 end)
+        if s then
+            if bgCol == DefaultTheme.Surface or bgCol == DefaultTheme.SurfaceAct or bgCol == DefaultTheme.SurfaceHov then
+                obj.BackgroundTransparency = 0.4
+            elseif bgCol == DefaultTheme.BG or bgCol == DefaultTheme.BGAlt then
+                obj.BackgroundTransparency = 0.25
+            end
         end
     end
     return obj
