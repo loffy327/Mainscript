@@ -111,6 +111,14 @@ function Util.New(class, props)
             obj[k] = v
         end
     end
+    -- Auto-Glassmorphism
+    if not (props and props.BackgroundTransparency) then
+        if obj.BackgroundColor3 == DefaultTheme.Surface or obj.BackgroundColor3 == DefaultTheme.SurfaceAct or obj.BackgroundColor3 == DefaultTheme.SurfaceHov then
+            obj.BackgroundTransparency = 0.4
+        elseif obj.BackgroundColor3 == DefaultTheme.BG or obj.BackgroundColor3 == DefaultTheme.BGAlt then
+            obj.BackgroundTransparency = 0.25
+        end
+    end
     return obj
 end
 
@@ -329,7 +337,7 @@ function Libv2:CreateWindow(cfg)
     local AvatarToggle = Util.New("ImageButton", {
         Name = "AvatarToggle",
         BackgroundColor3 = T.Surface,
-        Size = UDim2.new(0, 60, 0, 60),
+        Size = UDim2.new(0, 80, 0, 80),
         Position = UDim2.new(0.5, 0, 0.1, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Image = WCfg.AvatarImage,
@@ -613,9 +621,42 @@ function Libv2:CreateWindow(cfg)
     end)
 
     -- [3] Close
+    local ConfirmModal = Util.New("Frame", {
+        BackgroundColor3 = Color3.new(0,0,0), BackgroundTransparency = 0.5,
+        Size = UDim2.new(1,0,1,0), ZIndex = 999, Visible = false, Parent = Win
+    })
+    local ConfirmBox = Util.New("Frame", {
+        BackgroundColor3 = T.BG, Size = UDim2.new(0, 300, 0, 150),
+        Position = UDim2.new(0.5, 0, 0.5, 0), AnchorPoint = Vector2.new(0.5, 0.5),
+        ZIndex = 1000, Parent = ConfirmModal
+    })
+    Util.Corner(ConfirmBox, T.RadiusMd)
+    Util.Stroke(ConfirmBox, T.Border, 1)
+    Util.New("TextLabel", {
+        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 60), Position = UDim2.new(0, 0, 0, 10),
+        Font = T.FontMed, Text = "Are you sure you want to delete the menu?",
+        TextColor3 = T.TxtHigh, TextWrapped = true, TextSize = 16, ZIndex = 1001, Parent = ConfirmBox
+    })
+    local YesBtn = Util.New("TextButton", {
+        BackgroundColor3 = T.Red, Size = UDim2.new(0, 100, 0, 35), Position = UDim2.new(0.5, -110, 1, -50),
+        Font = T.FontBold, Text = "Yes", TextColor3 = Color3.new(1,1,1), TextSize = 14, ZIndex = 1001, Parent = ConfirmBox
+    })
+    Util.Corner(YesBtn, T.RadiusSm)
+    local NoBtn = Util.New("TextButton", {
+        BackgroundColor3 = T.SurfaceAct, Size = UDim2.new(0, 100, 0, 35), Position = UDim2.new(0.5, 10, 1, -50),
+        Font = T.FontBold, Text = "No", TextColor3 = T.TxtHigh, TextSize = 14, ZIndex = 1001, Parent = ConfirmBox
+    })
+    Util.Corner(NoBtn, T.RadiusSm)
+    
+    YesBtn.MouseButton1Click:Connect(function()
+        if Gui and Gui.Parent then Gui:Destroy() end
+    end)
+    NoBtn.MouseButton1Click:Connect(function()
+        ConfirmModal.Visible = false
+    end)
+
     MakeCtrlBtn("Close", "X", T.Red, 3, function()
-        Util.Tween(Win, {Size = UDim2.new(0,0,0,0), BackgroundTransparency = 1}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-        State.MenuVisible = false
+        ConfirmModal.Visible = true
     end)
 
     -- Toggle key bindings
@@ -851,7 +892,7 @@ function Libv2:CreateWindow(cfg)
         BackgroundColor3 = T.BGAlt,
         BackgroundTransparency = 0.2,
         Size = UDim2.new(0, 300, 0, 32),
-        Position = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(0, 20, 0.5, -16),
         ZIndex = 100,
         Parent = Gui
     })
