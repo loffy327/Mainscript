@@ -2048,12 +2048,6 @@ function Libv2:CreateWindow(cfg)
         return Tab
     end
 
-    -- ============================================================
-    --  WINDOW API
-    -- ============================================================
-
-    local Window = {}
-    Window.Notify = Notify
 
     function Window:FetchAPI(url, decodeJSON)
         local success, res = pcall(function()
