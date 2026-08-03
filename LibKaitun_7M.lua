@@ -113,7 +113,7 @@ end
 function Lib:CreateWindow(cfg)
     cfg = cfg or {}
     local Title = cfg.Title or "Kaitun Hub"
-    local Avatar = cfg.AvatarImage or "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
+    local Avatar = cfg.AvatarImage or "rbxassetid://13589139360"
     local UseFPSBoost = cfg.FPS or false
 
     -- 1. Anti-Duplication
@@ -283,13 +283,10 @@ function Lib:CreateWindow(cfg)
 
     local IsKaituning = false
     KaitunBtn.MouseButton1Click:Connect(function()
-        IsKaituning = not IsKaituning
-        if IsKaituning then
+        if not IsKaituning then
+            IsKaituning = true
             Util.Tween(KaitunBtn, {BackgroundColor3 = T.Border}, 0.2)
-            KaitunBtn.Text = "STOP KAITUN"
-        else
-            Util.Tween(KaitunBtn, {BackgroundColor3 = T.Accent}, 0.2)
-            KaitunBtn.Text = "START KAITUN"
+            KaitunBtn.Text = "KAITUN ACTIVE"
         end
     end)
 
@@ -357,9 +354,12 @@ function Lib:CreateWindow(cfg)
     end
 
     function KaitunAPI:OnStart(cb)
+        local Fired = false
         KaitunBtn.MouseButton1Click:Connect(function()
-            if IsKaituning and cb then cb(true) end
-            if not IsKaituning and cb then cb(false) end
+            if not Fired and cb then
+                Fired = true
+                cb(true)
+            end
         end)
     end
 
@@ -409,6 +409,11 @@ function Lib:CreateWindow(cfg)
             Get = function() return state end
         }
     end
+
+    -- Open immediately on load
+    IsOpen = true
+    Win.Visible = true
+    Win.Size = TargetSize
 
     return KaitunAPI
 end
