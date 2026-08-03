@@ -304,7 +304,7 @@ function Lib:CreateWindow(cfg)
 
     Util.New("TextLabel", {
         BackgroundTransparency = 1, Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 10, 0, 10),
-        Font = T.FontBold, Text = "⚡ TRẠNG THÁI HIỆN TẠI", TextColor3 = T.TxtHigh, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = StatusBox
+        Font = T.FontBold, Text = "⚡ CURRENT STATUS", TextColor3 = T.TxtHigh, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = StatusBox
     })
 
     local CurrTaskLbl = Util.New("TextLabel", {
@@ -354,13 +354,14 @@ function Lib:CreateWindow(cfg)
     end
 
     function KaitunAPI:OnStart(cb)
-        local Fired = false
-        KaitunBtn.MouseButton1Click:Connect(function()
-            if not Fired and cb then
-                Fired = true
-                cb(true)
-            end
-        end)
+        if not IsKaituning then
+            IsKaituning = true
+            Util.Tween(KaitunBtn, {BackgroundColor3 = T.Border}, 0.2)
+            KaitunBtn.Text = "KAITUN ACTIVE"
+        end
+        if cb then
+            task.spawn(function() cb(true) end)
+        end
     end
 
     function KaitunAPI:CreateToggle(opts)
