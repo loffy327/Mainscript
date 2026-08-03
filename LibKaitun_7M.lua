@@ -246,15 +246,10 @@ function Lib:CreateWindow(cfg)
     Util.Corner(ProfImg, UDim.new(1,0))
     Util.Stroke(ProfImg, T.Accent, 0, 2)
 
-    local PlayerName = Util.New("TextLabel", {
-        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0, 130),
-        Font = T.FontBold, Text = LocalPlayer.Name, TextColor3 = T.TxtHigh, TextSize = 16, Parent = ProfileBox
-    })
-
     local StatsWrap = Util.New("Frame", {
-        BackgroundTransparency = 1, Size = UDim2.new(1, -20, 0, 90), Position = UDim2.new(0, 10, 0, 160), Parent = ProfileBox
+        BackgroundTransparency = 1, Size = UDim2.new(1, -20, 0, 90), Position = UDim2.new(0, 10, 0, 140), Parent = ProfileBox
     })
-    Util.New("UIListLayout", { FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 4), Parent = StatsWrap })
+    Util.New("UIListLayout", { FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 8), Parent = StatsWrap })
 
     local function MakeStatLine(icon, name, initVal, col)
         local f = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20), Parent = StatsWrap })
@@ -269,10 +264,23 @@ function Lib:CreateWindow(cfg)
         return vLbl
     end
 
-    local StatLevel = MakeStatLine("📈", "Level:", "1", T.Green)
-    local StatBeli  = MakeStatLine("💲", "Beli:", "$0", T.Green)
-    local StatFrag  = MakeStatLine("🔮", "Frags:", "0", Color3.fromRGB(155, 89, 182))
-    local StatRace  = MakeStatLine("🧬", "Race:", "Human", T.TxtHigh)
+    local StatName = MakeStatLine("👤", "Player:", LocalPlayer.Name, T.TxtHigh)
+    local StatTime = MakeStatLine("⏱️", "Time Run:", "00:00:00", T.Green)
+
+    task.spawn(function()
+        if not _G.KaitunStartTime then _G.KaitunStartTime = os.time() end
+        while task.wait(1) do
+            local diff = os.time() - _G.KaitunStartTime
+            local h = math.floor(diff / 3600)
+            local m = math.floor((diff % 3600) / 60)
+            local s = diff % 60
+            if StatTime and StatTime.Parent then
+                StatTime.Text = string.format("%02d:%02d:%02d", h, m, s)
+            else
+                break
+            end
+        end
+    end)
 
     local KaitunBtn = Util.New("TextButton", {
         BackgroundColor3 = T.Accent, Size = UDim2.new(1, 0, 1, -270), Position = UDim2.new(0, 0, 0, 270),
@@ -347,10 +355,7 @@ function Lib:CreateWindow(cfg)
     end
 
     function KaitunAPI:UpdateStats(stats)
-        if stats.Level then StatLevel.Text = tostring(stats.Level) end
-        if stats.Beli then StatBeli.Text = tostring(stats.Beli) end
-        if stats.Fragments then StatFrag.Text = tostring(stats.Fragments) end
-        if stats.Race then StatRace.Text = tostring(stats.Race) end
+        -- Deprecated: UI now shows Player Name and Run Time instead of stats.
     end
 
     function KaitunAPI:OnStart(cb)
